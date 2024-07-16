@@ -9,8 +9,8 @@ class PriceService
     const QUARTER_DISCOUNTS = [
         0 => 0,
         1 => ['monthsForDiscount' => 3, 'firstMonth' => 4],
-        2 => ['monthsForDiscount' => 5, 'firstMonth' => 10],
-        3 => ['monthsForDiscount' => 3, 'firstMonth' => 1],
+        2 => ['monthsForDiscount' => 5, 'firstMonth' => 10, 'newYear' => 1],
+        3 => ['monthsForDiscount' => 3, 'firstMonth' => 14],
     ];
 
 
@@ -32,22 +32,21 @@ class PriceService
 
         [
             'monthsForDiscount' => $monthsForDiscount,
-            'firstMonth' => $firstMonth
+            'firstMonth' => $firstMonth,
         ]  = self::QUARTER_DISCOUNTS[$quarter];
 
 
-        $monthsDiff = $firstMonth - $paymentDate->format('m');
 
-        $yearDiff = $startDate->diff($paymentDate)->y;
 
-        if ($monthsDiff < 0 || $yearDiff >= 1) {
-            $monthsDiff += 12;
-        }
+        $year = $paymentDate->format('Y') - isset(self::QUARTER_DISCOUNTS[$quarter]['newYear']);
+        $firstMonthDate = DateTime::createFromFormat('d.m.Y', "01.{$firstMonth}.{$year}");
+
+        $monthsDiff = $firstMonthDate->diff($paymentDate)->m;
 
         if ($monthsDiff >= $monthsForDiscount) {
             $modifier = (2 * ($monthsDiff - $monthsForDiscount));
             $percentage = min(3 + $modifier, 7) / 100;
-            return $price * $percentage;
+            return min($price * $percentage, 1500);
         }
 
         return 0;
@@ -55,6 +54,7 @@ class PriceService
 
     private function getAgeDiscount(int $age, int $price): float|int
     {
+
         return match (true) {
             $age >= 3 && $age <= 6 => $price * 0.8,
             $age > 6 && $age <= 12 => min(4500, $price * 0.2),
